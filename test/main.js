@@ -19,38 +19,29 @@ function processSource(source) {
   console.log(sExps);
 }
 
-function foldStr(fun, acc, str) {
-  for (let char of str) {
-    acc = fun(char, acc)
-  }
-  return acc
-}
-
-function addSExp(braces, acc, expressions) {
-  const newBraces = braces - 1
-  if (newBraces === 0) {
-    return [ newBraces, '', [].concat(expressions, [ acc ]) ]
-  } else {
-    return [ newBraces, acc, expressions ]
-  }
-}
-
-function foldSExps(char, [ braces, acc, expressions ]) {
-  const newAcc = acc + char
-  switch (char) {
-    case '(':
-      return [ braces + 1, newAcc, expressions ]
-      break
-    case ')':
-      return addSExp(braces, newAcc, expressions)
-      break
-    default:
-      return [ braces, newAcc, expressions ]
-  }
-}
-
 function splitSExps(source) {
-  return foldStr(foldSExps, [ 0, '', [] ], source)[2]
+  let expressions = []
+  let braces = 0
+  let acc = ''
+
+  for (let char of source) {
+    acc += char
+    if (char === '(') {
+      braces += 1
+    } else if (char === ')') {
+      braces -= 1
+      if (braces === 0) {
+        expressions.push(acc)
+        acc = ''
+      }
+    }
+  }
+
+  if (acc.startsWith('(')) {
+    return null
+  } else {
+    return expressions
+  }
 }
 
 readFile(process.argv[2])
