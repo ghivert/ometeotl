@@ -1,0 +1,14 @@
+(define main
+ (log "hello world"))
+
+(define init
+ {:people '()
+  :dogs '()})
+
+(define new-dog name
+ {:name name})
+
+(define view state
+ (h1 {:class "test"} ("hello world")))
+
+(main)
