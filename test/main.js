@@ -1,49 +1,11 @@
-const fs = require('fs')
+const fs = require('./fs')
+const parser = require('./parser')
 
 let environment = {}
 
-function readFile(file) {
-  return new Promise((resolve, reject) => {
-    fs.readFile(file, function(err, res) {
-      if (err) {
-        reject(err)
-      } else {
-        resolve(res.toString())
-      }
-    })
-  })
-}
-
-function processSource(source) {
-  const sExps = splitSExps(source.replace(/\n/g, ''))
-  console.log(sExps);
-}
-
-function splitSExps(source) {
-  let expressions = []
-  let braces = 0
-  let acc = ''
-
-  for (let char of source) {
-    acc += char
-    if (char === '(') {
-      braces += 1
-    } else if (char === ')') {
-      braces -= 1
-      if (braces === 0) {
-        expressions.push(acc)
-        acc = ''
-      }
-    }
-  }
-
-  if (acc.startsWith('(')) {
-    return null
-  } else {
-    return expressions
-  }
-}
-
-readFile(process.argv[2])
-  .then(file => processSource(file))
+fs.readFile(process.argv[2])
+  .then(file => file.toString())
+  .then(source => source.replace(/\n/g, ''))
+  .then(source => parser.splitSExps(source))
+  .then(sExps => console.log(sExps))
   .catch(error => console.error(error))
