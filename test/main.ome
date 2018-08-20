@@ -9,6 +9,6 @@
  {:name name})
 
 (define view state
- (h1 {:class "test"} ("hello world")))
+ (h1 {:class "test"} ("hello \"world")))
 
 (main)
