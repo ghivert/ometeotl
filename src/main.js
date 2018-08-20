@@ -69,7 +69,7 @@ function atom(token: string): Atom {
       return { type: 'Float', value: toFloat }
     }
   } else {
-    return { type: 'Int', value: toInt}
+    return { type: 'Int', value: toInt }
   }
 }
 
