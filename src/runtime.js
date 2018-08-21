@@ -1,6 +1,6 @@
 import type { AST, Environment } from './types'
 
-function defun(namespace, funName, args: Array<string>, body) {
+function defun(namespace, funName, args, body): any {
   let moduleDef = global.modules
   namespace.split('.').forEach(moduleName => {
     if (!global.modules[moduleName]) {
@@ -102,7 +102,7 @@ function callFunction(namespace, qualifiedName): [string, number] {
 }
 
 function fetchArity(modules, fetchedModule, functionName) {
-  const module = fetchedModule.reduce((accumulator, value) => {
+  const module: any = fetchedModule.reduce((accumulator: any, value) => {
     return accumulator[value]
   }, global.modules)
   return module[functionName].length
