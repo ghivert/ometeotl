@@ -12,3 +12,10 @@ export type Atom
     type: 'Float' | 'Int',
     value: number
   }
+
+export type Environment = {
+  variables: {
+    modules: ?{}
+  },
+  ancestor: ?Environment
+}

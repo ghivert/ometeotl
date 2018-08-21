@@ -1,40 +1,111 @@
-import type { AST } from './types'
+import type { AST, Environment } from './types'
 
-function defun(ast: Array<AST>) {
-  console.log(ast)
-}
-
-let modules = {
-  kernel: {
-    defun: defun
+function defun(namespace, funName, args: Array<string>, body) {
+  let moduleDef = global.modules
+  namespace.split('.').forEach(moduleName => {
+    if (!global.modules[moduleName]) {
+      global.modules[moduleName] = {}
+      moduleDef = global.modules[moduleName]
+    } else {
+      moduleDef = global.modules[moduleName]
+    }
+  })
+  if (args.length > 0) {
+    moduleDef[funName] = new Function(body)
+  } else {
+    moduleDef[funName] = new Function(...args, body)
   }
 }
 
-const interpret = (namespace: Array<string>) => (ast: AST) => {
+function log(arg) {
+  console.log(arg)
+}
+
+global.modules = {
+  kernel: {
+    defun: defun,
+    log: log
+  }
+}
+
+let environment: Environment = {
+  variables: {
+    modules: global.modules
+  },
+  ancestor: null
+}
+
+function newEnvironment(environment: Environment): Environment { // eslint-disable-line
+  return {
+    variables: {
+      modules: null
+    },
+    ancestor: environment
+  }
+}
+
+function debug<Type>(value: Type): Type { // eslint-disable-line
+  console.log(JSON.stringify(value, null, 1))
+  return value
+}
+
+const compile = (namespace: Array<string>) => (ast: AST) => {
   switch (ast.type) {
-    case 'List':
-      return callFunction(namespace, ast)
+    case 'List': {
+      const funCall = callFunction(namespace, expectId(ast.value[0]))
+      if (funCall[0] === "modules['kernel']['defun']") {
+        const newTree = [ { type: 'Identifier', value: namespace.join('.') } ].concat(ast.value.slice(1))
+        const content = newTree.map(compile(namespace))
+        const modified = content.slice(0, content.length - 1).concat([ `"${content[content.length - 1]}"` ])
+        return `${funCall[0]}(${modified.join(', ')});`
+      } else {
+        return `${funCall[0]}(${ast.value.slice(1).map(compile(namespace)).join(', ')});`
+      }
+    }
+    case 'Identifier': {
+      return `'${ast.value}'`
+    }
+    case 'String': return `'${ast.value}'`
+    case 'Array': {
+      return `[${ast.value.map(compile(namespace)).join(', ')}]`
+    }
   }
   return ''
 }
 
-function callFunction(namespace, ast) {
-  const functionNamespace = expectId(ast.value[0]).split('.')
+function callFunction(namespace, qualifiedName): [string, number] {
+  const functionNamespace = qualifiedName.split('.')
   const modulesNamespace = functionNamespace.slice(0, functionNamespace.length - 1)
   const functionName = functionNamespace[functionNamespace.length - 1]
-  const fetchedModule = modulesNamespace.length > 0 ? fetchModule(modulesNamespace) : null
-  if (fetchedModule) {
-    return fetchedModule[functionName](ast.value.slice(1))
-  } else {
-    const localModule = fetchModule(namespace)
-    if (localModule) {
-      return localModule[functionName](ast.value.slice(1))
+  const fetchedModule = modulesNamespace.length > 0 ? fetchModule(modulesNamespace, functionName) : null
+  if (modulesNamespace.length > 0) {
+    if (fetchedModule) {
+      const arity = fetchArity(global.modules, fetchedModule, functionName)
+      return [ `global.modules${fetchedModule.map(moduleName => `['${moduleName}']`).join('')}['${functionName}']`, arity ]
     } else {
-      if (modules.kernel[functionName]) {
-        return modules.kernel[functionName](ast.value.slice(1))
+      throw 'Module ' + modulesNamespace.join('.') + ' don\'t exist'
+    }
+  } else {
+    const localModule = fetchModule(namespace, functionName)
+    if (localModule) {
+      const arity = fetchArity(global.modules, localModule, functionName)
+      return [ `global.modules${localModule.map(moduleName => `['${moduleName}']`).join('')}['${functionName}']`, arity ]
+    } else {
+      if (global.modules.kernel[functionName]) {
+        const arity = global.modules.kernel[functionName].length
+        return [ `global.modules['kernel']['${functionName}']`, arity ]
+      } else {
+        throw 'Function does not exists'
       }
     }
   }
+}
+
+function fetchArity(modules, fetchedModule, functionName) {
+  const module = fetchedModule.reduce((accumulator, value) => {
+    return accumulator[value]
+  }, global.modules)
+  return module[functionName].length
 }
 
 function expectId(ast: AST): string {
@@ -45,18 +116,36 @@ function expectId(ast: AST): string {
   }
 }
 
-function fetchModule(namespace) {
-  return namespace
+function expectArray(ast: AST): Array<AST> { // eslint-disable-line
+  if (ast.type !== 'Array') {
+    throw 'Expect Array'
+  } else {
+    return ast.value
+  }
+}
+
+function fetchModule(namespace, functionName) {
+  const moduleName = namespace
     .reduce((accumulator, value) => {
       if (accumulator) {
-        return accumulator[value]
+        const module = accumulator[1][value]
+        if (module) {
+          return [ accumulator[0].concat([value]), module ]
+        } else {
+          return null
+        }
       } else {
         return null
       }
-    }, modules)
+    }, [ [], global.modules ])
+  if (moduleName && moduleName[1][functionName]) {
+    return moduleName[0]
+  } else {
+    return null
+  }
 }
 
 module.exports = {
-  modules: modules,
-  interpret: interpret
+  environment: environment,
+  compile: compile
 }

@@ -162,7 +162,8 @@ function compileFile(metadata, fileName) {
       }
     })
     .then(debug)
-    .then(runtime.interpret(namespace))
+    .then(runtime.compile(namespace))
+    .then(console.log)
     .catch(console.log)
 }
 
