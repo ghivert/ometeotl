@@ -1,14 +1,14 @@
-(define main
+(defun main []
  (log "hello world"))
 
-(define init
- {:people '()
-  :dogs '()})
-
-(define new-dog name
- {:name name})
-
-(define view state
- (h1 {:class "test"} ("hello \"world")))
+; (defun init []
+;  {:people '()
+;   :dogs '()})
+;
+; (defun new-dog [name]
+;  {:name name})
+;
+; (defun view [state]
+;  (h1 {:class "test"} ("hello \"world")))
 
 (main)
