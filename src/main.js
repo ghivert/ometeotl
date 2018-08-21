@@ -149,23 +149,24 @@ function resolveNamespace(metadata, fileName) {
 
 function compileFile(metadata, fileName) {
   const namespace = resolveNamespace(metadata, fileName)
-  Promise.resolve(fileName)
-    .then(fs.readFileSync)
-    .then(file => file.toString())
-    .then(tokenize)
-    .then(mergeStrings)
-    .then(source => {
-      try {
-        return parse(source)
-      } catch (error) {
-        return { type: 'List', value: [] }
-      }
-    })
-    .then(debug)
-    .then(runtime.compile(namespace))
-    .then(console.log)
-    .catch(console.log)
+  const tokens = mergeStrings(tokenize(fs.readFileSync(fileName).toString()))
+  while (tokens.length > 0) {
+    let source = {}
+    try {
+      source = parse(tokens)
+    } catch (error) {
+      source = { type: 'List', value: [] }
+    }
+    eval(runtime.compile(namespace)(source))
+  }
 }
+
+global.__OmeteotlModules['kernel']['defun'](
+  'main',
+  [],
+  "global.__OmeteotlModules['kernel']['log']('hello world');"
+);
+
 
 // function defun(name, args, body) {
 //   return ''

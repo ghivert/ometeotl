@@ -1,13 +1,13 @@
 import type { AST, Environment } from './types'
 
 function defun(namespace, funName, args, body): any {
-  let moduleDef = global.modules
+  let moduleDef = global.__OmeteotlModules
   namespace.split('.').forEach(moduleName => {
-    if (!global.modules[moduleName]) {
-      global.modules[moduleName] = {}
-      moduleDef = global.modules[moduleName]
+    if (!global.__OmeteotlModules[moduleName]) {
+      global.__OmeteotlModules[moduleName] = {}
+      moduleDef = global.__OmeteotlModules[moduleName]
     } else {
-      moduleDef = global.modules[moduleName]
+      moduleDef = global.__OmeteotlModules[moduleName]
     }
   })
   if (args.length > 0) {
@@ -21,7 +21,7 @@ function log(arg) {
   console.log(arg)
 }
 
-global.modules = {
+global.__OmeteotlModules = {
   kernel: {
     defun: defun,
     log: log
@@ -30,7 +30,7 @@ global.modules = {
 
 let environment: Environment = {
   variables: {
-    modules: global.modules
+    modules: global.__OmeteotlModules
   },
   ancestor: null
 }
@@ -53,7 +53,7 @@ const compile = (namespace: Array<string>) => (ast: AST) => {
   switch (ast.type) {
     case 'List': {
       const funCall = callFunction(namespace, expectId(ast.value[0]))
-      if (funCall[0] === "modules['kernel']['defun']") {
+      if (funCall[0] === "global.__OmeteotlModules['kernel']['defun']") {
         const newTree = [ { type: 'Identifier', value: namespace.join('.') } ].concat(ast.value.slice(1))
         const content = newTree.map(compile(namespace))
         const modified = content.slice(0, content.length - 1).concat([ `"${content[content.length - 1]}"` ])
@@ -80,20 +80,20 @@ function callFunction(namespace, qualifiedName): [string, number] {
   const fetchedModule = modulesNamespace.length > 0 ? fetchModule(modulesNamespace, functionName) : null
   if (modulesNamespace.length > 0) {
     if (fetchedModule) {
-      const arity = fetchArity(global.modules, fetchedModule, functionName)
-      return [ `global.modules${fetchedModule.map(moduleName => `['${moduleName}']`).join('')}['${functionName}']`, arity ]
+      const arity = fetchArity(global.__OmeteotlModules, fetchedModule, functionName)
+      return [ `global.__OmeteotlModules${fetchedModule.map(moduleName => `['${moduleName}']`).join('')}['${functionName}']`, arity ]
     } else {
       throw 'Module ' + modulesNamespace.join('.') + ' don\'t exist'
     }
   } else {
     const localModule = fetchModule(namespace, functionName)
     if (localModule) {
-      const arity = fetchArity(global.modules, localModule, functionName)
-      return [ `global.modules${localModule.map(moduleName => `['${moduleName}']`).join('')}['${functionName}']`, arity ]
+      const arity = fetchArity(global.__OmeteotlModules, localModule, functionName)
+      return [ `global.__OmeteotlModules${localModule.map(moduleName => `['${moduleName}']`).join('')}['${functionName}']`, arity ]
     } else {
-      if (global.modules.kernel[functionName]) {
-        const arity = global.modules.kernel[functionName].length
-        return [ `global.modules['kernel']['${functionName}']`, arity ]
+      if (global.__OmeteotlModules.kernel[functionName]) {
+        const arity = global.__OmeteotlModules.kernel[functionName].length
+        return [ `global.__OmeteotlModules['kernel']['${functionName}']`, arity ]
       } else {
         throw 'Function does not exists'
       }
@@ -104,7 +104,7 @@ function callFunction(namespace, qualifiedName): [string, number] {
 function fetchArity(modules, fetchedModule, functionName) {
   const module: any = fetchedModule.reduce((accumulator: any, value) => {
     return accumulator[value]
-  }, global.modules)
+  }, global.__OmeteotlModules)
   return module[functionName].length
 }
 
@@ -137,7 +137,7 @@ function fetchModule(namespace, functionName) {
       } else {
         return null
       }
-    }, [ [], global.modules ])
+    }, [ [], global.__OmeteotlModules ])
   if (moduleName && moduleName[1][functionName]) {
     return moduleName[0]
   } else {
